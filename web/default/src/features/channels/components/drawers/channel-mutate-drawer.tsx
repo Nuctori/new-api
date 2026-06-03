@@ -218,6 +218,7 @@ function hasAdvancedSettingsValues(values: ChannelFormValues): boolean {
     values.thinking_to_content ||
     values.pass_through_body_enabled ||
     values.system_prompt_override ||
+    values.responses_compat_mode ||
     values.claude_beta_query ||
     values.upstream_model_update_check_enabled ||
     values.upstream_model_update_auto_sync_enabled ||
@@ -3130,6 +3131,33 @@ export function ChannelMutateDrawer({
                                   <FormDescription>
                                     {t(
                                       'Force format response to OpenAI standard (OpenAI channel only)'
+                                    )}
+                                  </FormDescription>
+                                </div>
+                                <FormControl>
+                                  <Switch
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                  />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        )}
+
+                        {(currentType === 1 || currentType === 43) && (
+                          <FormField
+                            control={form.control}
+                            name='responses_compat_mode'
+                            render={({ field }) => (
+                              <FormItem className='flex items-center justify-between px-4 py-3'>
+                                <div className='space-y-0.5'>
+                                  <FormLabel>
+                                    {t('Responses Compatibility Mode')}
+                                  </FormLabel>
+                                  <FormDescription>
+                                    {t(
+                                      'Enable explicit /v1/responses compatibility for upstreams that only support /v1/chat/completions. This feature stays disabled unless you turn it on here'
                                     )}
                                   </FormDescription>
                                 </div>
