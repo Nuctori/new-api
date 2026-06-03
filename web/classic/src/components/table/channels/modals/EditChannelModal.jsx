@@ -66,6 +66,10 @@ import JSONEditor from '../../../common/ui/JSONEditor';
 import SecureVerificationModal from '../../../common/modals/SecureVerificationModal';
 import StatusCodeRiskGuardModal from './StatusCodeRiskGuardModal';
 import ChannelKeyDisplay from '../../../common/ui/ChannelKeyDisplay';
+import {
+  readResponsesCompatMode,
+  writeResponsesCompatMode,
+} from './channel-settings';
 import { useSecureVerification } from '../../../../hooks/common/useSecureVerification';
 import { parseChannelConnectionString } from '../../../../helpers/token';
 import { createApiCalls } from '../../../../services/secureVerification';
@@ -928,8 +932,7 @@ const EditChannelModal = (props) => {
           )
             ? parsedSettings.upstream_model_update_ignored_models.join(',')
             : '';
-          data.responses_compat_mode =
-            parsedSettings.responses_compat_mode === true;
+          data.responses_compat_mode = readResponsesCompatMode(data.settings);
         } catch (error) {
           console.error('解析其他设置失败:', error);
           data.azure_responses_version = '';
@@ -1777,12 +1780,11 @@ const EditChannelModal = (props) => {
       settings.openrouter_enterprise =
         localInputs.is_enterprise_account === true;
     }
-    if (localInputs.type === 1 || localInputs.type === 43) {
-      settings.responses_compat_mode =
-        localInputs.responses_compat_mode === true;
-    } else if ('responses_compat_mode' in settings) {
-      delete settings.responses_compat_mode;
-    }
+    writeResponsesCompatMode(
+      settings,
+      localInputs.type,
+      localInputs.responses_compat_mode,
+    );
 
     // type === 33 (AWS): 保存 aws_key_type 到 settings
     if (localInputs.type === 33) {
