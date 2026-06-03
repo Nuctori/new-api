@@ -96,6 +96,41 @@ func TestConvertResponsesToChatRequest(t *testing.T) {
 	}
 }
 
+func TestOpenAIResponsesCompatRequiresExplicitToggle(t *testing.T) {
+	gin.SetMode(gin.ReleaseMode)
+
+	request := dto.OpenAIResponsesRequest{
+		Model: "deepseek-chat",
+		Input: mustMarshalJSON(t, "hello"),
+	}
+	adaptor := Adaptor{ChannelType: constant.ChannelTypeOpenAI}
+
+	got, err := adaptor.ConvertOpenAIResponsesRequest(nil, &relaycommon.RelayInfo{}, request)
+	if err != nil {
+		t.Fatalf("ConvertOpenAIResponsesRequest returned error: %v", err)
+	}
+	if _, ok := got.(dto.OpenAIResponsesRequest); !ok {
+		t.Fatalf("expected raw responses request without compat toggle, got %T", got)
+	}
+
+	enabled := true
+	info := &relaycommon.RelayInfo{
+		ChannelMeta: &relaycommon.ChannelMeta{},
+	}
+	info.ChannelOtherSettings.ResponsesCompatMode = &enabled
+	got, err = adaptor.ConvertOpenAIResponsesRequest(nil, info, request)
+	if err != nil {
+		t.Fatalf("ConvertOpenAIResponsesRequest with toggle returned error: %v", err)
+	}
+	chatReq, ok := got.(*dto.GeneralOpenAIRequest)
+	if !ok {
+		t.Fatalf("expected chat completions request with compat toggle, got %T", got)
+	}
+	if len(chatReq.Messages) != 1 || chatReq.Messages[0].StringContent() != "hello" {
+		t.Fatalf("unexpected converted messages: %#v", chatReq.Messages)
+	}
+}
+
 func TestChatToResponsesHandlerCachesFullConversation(t *testing.T) {
 	gin.SetMode(gin.ReleaseMode)
 	clearResponsesSessionCache()

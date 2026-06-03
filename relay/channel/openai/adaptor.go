@@ -41,6 +41,9 @@ type Adaptor struct {
 }
 
 func shouldConvertResponsesToChat(info *relaycommon.RelayInfo, channelType int) bool {
+	if info != nil && info.ChannelMeta != nil && info.ChannelOtherSettings.ResponsesCompatMode != nil {
+		return *info.ChannelOtherSettings.ResponsesCompatMode
+	}
 	switch channelType {
 	case constant.ChannelTypeOpenAI, constant.ChannelTypeAzure, constant.ChannelTypeOpenRouter:
 		return false

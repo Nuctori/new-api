@@ -202,6 +202,7 @@ const EditChannelModal = (props) => {
     aws_key_type: 'ak_sk',
     // 企业账户设置
     is_enterprise_account: false,
+    responses_compat_mode: false,
     // 字段透传控制默认值
     allow_service_tier: false,
     disable_store: false, // false = 允许透传（默认开启）
@@ -927,9 +928,12 @@ const EditChannelModal = (props) => {
           )
             ? parsedSettings.upstream_model_update_ignored_models.join(',')
             : '';
+          data.responses_compat_mode =
+            parsedSettings.responses_compat_mode === true;
         } catch (error) {
           console.error('解析其他设置失败:', error);
           data.azure_responses_version = '';
+          data.responses_compat_mode = false;
           data.region = '';
           data.vertex_key_type = 'json';
           data.aws_key_type = 'ak_sk';
@@ -949,6 +953,7 @@ const EditChannelModal = (props) => {
         }
       } else {
         // 兼容历史数据：老渠道没有 settings 时，默认按 json 展示
+        data.responses_compat_mode = false;
         data.vertex_key_type = 'json';
         data.aws_key_type = 'ak_sk';
         data.is_enterprise_account = false;
@@ -1772,6 +1777,12 @@ const EditChannelModal = (props) => {
       settings.openrouter_enterprise =
         localInputs.is_enterprise_account === true;
     }
+    if (localInputs.type === 1 || localInputs.type === 43) {
+      settings.responses_compat_mode =
+        localInputs.responses_compat_mode === true;
+    } else if ('responses_compat_mode' in settings) {
+      delete settings.responses_compat_mode;
+    }
 
     // type === 33 (AWS): 保存 aws_key_type 到 settings
     if (localInputs.type === 33) {
@@ -1836,6 +1847,7 @@ const EditChannelModal = (props) => {
     delete localInputs.system_prompt;
     delete localInputs.system_prompt_override;
     delete localInputs.is_enterprise_account;
+    delete localInputs.responses_compat_mode;
     // 顶层的 vertex_key_type 不应发送给后端
     delete localInputs.vertex_key_type;
     // 顶层的 aws_key_type 不应发送给后端
@@ -2519,11 +2531,15 @@ const EditChannelModal = (props) => {
                     <Form.Switch field='claude_beta_query' label={t('Claude 强制 beta=true')} checkedText={t('开')} uncheckedText={t('关')} onChange={(value) => handleChannelOtherSettingsChange('claude_beta_query', value)} extraText={t('开启后，该渠道请求 Claude 时将强制追加 ?beta=true（无需客户端手动传参）')} />
                   )}
 
-                  {inputs.type === 1 && (
-                    <Form.Switch field='force_format' label={t('强制格式化')} checkedText={t('开')} uncheckedText={t('关')} onChange={(value) => handleChannelSettingsChange('force_format', value)} extraText={t('强制将响应格式化为 OpenAI 标准格式（只适用于OpenAI渠道类型）')} />
-                  )}
+                    {inputs.type === 1 && (
+                      <Form.Switch field='force_format' label={t('强制格式化')} checkedText={t('开')} uncheckedText={t('关')} onChange={(value) => handleChannelSettingsChange('force_format', value)} extraText={t('强制将响应格式化为 OpenAI 标准格式（只适用于OpenAI渠道类型）')} />
+                    )}
 
-                  <Form.Switch field='thinking_to_content' label={t('思考内容转换')} checkedText={t('开')} uncheckedText={t('关')} onChange={(value) => handleChannelSettingsChange('thinking_to_content', value)} extraText={t('将 reasoning_content 转换为 <think> 标签拼接到内容中')} />
+                    {(inputs.type === 1 || inputs.type === 43) && (
+                      <Form.Switch field='responses_compat_mode' label={t('Responses 兼容模式')} checkedText={t('开')} uncheckedText={t('关')} onChange={(value) => handleChannelOtherSettingsChange('responses_compat_mode', value)} extraText={t('显式开启 /v1/responses 兼容转换。未勾选时不会自动触发，适用于仅支持 /v1/chat/completions 的上游')} />
+                    )}
+
+                    <Form.Switch field='thinking_to_content' label={t('思考内容转换')} checkedText={t('开')} uncheckedText={t('关')} onChange={(value) => handleChannelSettingsChange('thinking_to_content', value)} extraText={t('将 reasoning_content 转换为 <think> 标签拼接到内容中')} />
                   <Form.Switch field='pass_through_body_enabled' label={t('透传请求体')} checkedText={t('开')} uncheckedText={t('关')} onChange={(value) => handleChannelSettingsChange('pass_through_body_enabled', value)} extraText={t('启用请求体透传功能')} />
 
                   <Form.Input field='proxy' label={t('代理地址')} placeholder={t('例如: socks5://user:pass@host:port')} onChange={(value) => handleChannelSettingsChange('proxy', value)} showClear extraText={t('用于配置网络代理，支持 socks5 协议')} />
