@@ -166,10 +166,22 @@ func (a *Adaptor) ConvertOpenAIResponsesRequest(c *gin.Context, info *relaycommo
 	if err != nil {
 		return nil, err
 	}
+	normalizeDeepSeekResponsesCompatRoles(convertedRequest)
 	if err := applyDeepSeekV4OpenAIThinkingSuffix(info, convertedRequest); err != nil {
 		return nil, err
 	}
 	return convertedRequest, nil
+}
+
+func normalizeDeepSeekResponsesCompatRoles(request *dto.GeneralOpenAIRequest) {
+	if request == nil {
+		return
+	}
+	for i := range request.Messages {
+		if request.Messages[i].Role == "developer" {
+			request.Messages[i].Role = "system"
+		}
+	}
 }
 
 func (a *Adaptor) DoRequest(c *gin.Context, info *relaycommon.RelayInfo, requestBody io.Reader) (any, error) {

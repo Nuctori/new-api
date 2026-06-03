@@ -1,4 +1,4 @@
-﻿package openai
+package openai
 
 import (
 	"fmt"
@@ -116,12 +116,18 @@ func filterResponsesTools(rawToolsJSON []byte) []dto.ToolCallRequest {
 		if toolType != "function" || isResponsesBuiltinTool(toolType) {
 			continue
 		}
-		var tc dto.ToolCallRequest
-		tc.Type = toolType
+		tc := dto.ToolCallRequest{Type: toolType}
 		if fn, ok := tool["function"].(map[string]any); ok {
 			tc.Function.Name, _ = fn["name"].(string)
 			tc.Function.Description, _ = fn["description"].(string)
 			tc.Function.Parameters = fn["parameters"]
+		} else {
+			tc.Function.Name, _ = tool["name"].(string)
+			tc.Function.Description, _ = tool["description"].(string)
+			tc.Function.Parameters = tool["parameters"]
+		}
+		if strings.TrimSpace(tc.Function.Name) == "" {
+			continue
 		}
 		filtered = append(filtered, tc)
 	}

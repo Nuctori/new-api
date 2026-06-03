@@ -96,6 +96,44 @@ func TestConvertResponsesToChatRequest(t *testing.T) {
 	}
 }
 
+func TestConvertResponsesToChatRequestSupportsTopLevelFunctionTools(t *testing.T) {
+	gin.SetMode(gin.ReleaseMode)
+
+	request := dto.OpenAIResponsesRequest{
+		Model: "gpt-5.4",
+		Input: mustMarshalJSON(t, "hello"),
+		Tools: mustMarshalJSON(t, []map[string]any{
+			{
+				"type":        "function",
+				"name":        "apply_patch",
+				"description": "Apply a patch",
+				"parameters": map[string]any{
+					"type": "object",
+				},
+			},
+			{
+				"type":        "function",
+				"name":        "",
+				"description": "invalid empty tool name",
+				"parameters": map[string]any{
+					"type": "object",
+				},
+			},
+		}),
+	}
+
+	chatReq, err := ConvertResponsesToChatRequest(nil, &relaycommon.RelayInfo{}, request)
+	if err != nil {
+		t.Fatalf("ConvertResponsesToChatRequest returned error: %v", err)
+	}
+	if len(chatReq.Tools) != 1 {
+		t.Fatalf("unexpected tool count: %#v", chatReq.Tools)
+	}
+	if chatReq.Tools[0].Function.Name != "apply_patch" {
+		t.Fatalf("unexpected tool name: %#v", chatReq.Tools[0])
+	}
+}
+
 func TestOpenAIResponsesCompatRequiresExplicitToggle(t *testing.T) {
 	gin.SetMode(gin.ReleaseMode)
 
