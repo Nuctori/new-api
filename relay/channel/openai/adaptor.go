@@ -40,6 +40,20 @@ type Adaptor struct {
 	ResponseFormat string
 }
 
+func shouldConvertResponsesToChat(info *relaycommon.RelayInfo, channelType int) bool {
+	switch channelType {
+	case constant.ChannelTypeOpenAI, constant.ChannelTypeAzure, constant.ChannelTypeOpenRouter:
+		return false
+	}
+	if info != nil && info.ChannelBaseUrl != "" {
+		baseURL := strings.ToLower(info.ChannelBaseUrl)
+		if strings.Contains(baseURL, "openrouter.ai") {
+			return false
+		}
+	}
+	return true
+}
+
 func (a *Adaptor) ConvertGeminiRequest(c *gin.Context, info *relaycommon.RelayInfo, request *dto.GeminiChatRequest) (any, error) {
 	// 使用 service.GeminiToOpenAIRequest 转换请求格式
 	openaiRequest, err := service.GeminiToOpenAIRequest(request, info)
@@ -597,6 +611,9 @@ func (a *Adaptor) ConvertOpenAIResponsesRequest(c *gin.Context, info *relaycommo
 	if info != nil && request.Reasoning != nil && request.Reasoning.Effort != "" {
 		info.ReasoningEffort = request.Reasoning.Effort
 	}
+	if shouldConvertResponsesToChat(info, a.ChannelType) {
+		return ConvertResponsesToChatRequest(c, info, request)
+	}
 	return request, nil
 }
 
@@ -627,10 +644,18 @@ func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, info *relaycom
 	case relayconstant.RelayModeRerank:
 		usage, err = common_handler.RerankHandler(c, info, resp)
 	case relayconstant.RelayModeResponses:
-		if info.IsStream {
-			usage, err = OaiResponsesStreamHandler(c, info, resp)
+		if info.ResponsesToChatMode {
+			if info.IsStream {
+				usage, err = ChatToResponsesStreamHandler(c, info, resp)
+			} else {
+				usage, err = ChatToResponsesHandler(c, info, resp)
+			}
 		} else {
-			usage, err = OaiResponsesHandler(c, info, resp)
+			if info.IsStream {
+				usage, err = OaiResponsesStreamHandler(c, info, resp)
+			} else {
+				usage, err = OaiResponsesHandler(c, info, resp)
+			}
 		}
 	case relayconstant.RelayModeResponsesCompact:
 		usage, err = OaiResponsesCompactionHandler(c, resp)
